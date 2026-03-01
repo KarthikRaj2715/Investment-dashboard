@@ -73,6 +73,24 @@ gain_value = latest["Gain/Loss($)"]
 gain_pct = latest["Gain/Loss(%)"]
 
 # -----------------------------
+# EXTRA METRICS (CAGR + MAX DRAWDOWN)
+# -----------------------------
+start_date = df["Date"].iloc[0]
+end_date = latest["Date"]
+years = (end_date - start_date).days / 365.25
+
+# CAGR based on invested -> current value (simple and stable)
+cagr = (current_value / total_invested) ** (1 / years) - 1 if years > 0 else 0
+
+# Max drawdown already computed earlier? If not, compute here safely:
+if "Drawdown(%)" in df.columns:
+    max_dd = df["Drawdown(%)"].min()
+else:
+    peak = df["Current Value($)"].cummax()
+    df["Drawdown(%)"] = (df["Current Value($)"] / peak - 1) * 100
+    max_dd = df["Drawdown(%)"].min()
+
+# -----------------------------
 # HEADER
 # -----------------------------
 st.title("My Investment Journey")
@@ -81,12 +99,14 @@ st.caption("Tracking discipline, growth, and long-term wealth building")
 # -----------------------------
 # METRIC CARDS
 # -----------------------------
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5, col6 = st.columns(6)
 
 col1.metric("Total Invested", f"${total_invested:,.0f}")
 col2.metric("Current Value", f"${current_value:,.0f}")
 col3.metric("Total Gain", f"${gain_value:,.0f}")
 col4.metric("Total Gain (%)", f"{gain_pct:.2f}%")
+col5.metric("CAGR (annualised)", f"{cagr*100:.2f}%")
+col6.metric("Max Drawdown", f"{max_dd:.2f}%")
 
 st.divider()
 
