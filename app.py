@@ -117,7 +117,7 @@ fig.update_layout(
     legend=dict(orientation="h", y=1.15)
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width="stretch")
 
 # -----------------------------
 # GAIN / LOSS % CHART
@@ -140,4 +140,4 @@ fig2.update_layout(
     template="plotly_white"
 )
 
-st.plotly_chart(fig2, use_container_width=True)
+st.plotly_chart(fig2, use_container_width="stretch")
