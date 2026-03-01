@@ -94,7 +94,11 @@ else:
 # HEADER
 # -----------------------------
 st.title("My Investment Journey")
-st.caption("Tracking discipline, growth, and long-term wealth building")
+st.markdown(
+    "<div style='margin-top:-10px; color:#666;'>Tracking discipline, growth, and long-term wealth building</div>",
+    unsafe_allow_html=True
+)
+st.write("")
 
 # -----------------------------
 # METRIC CARDS
@@ -193,3 +197,99 @@ fig3.update_layout(
 )
 
 st.plotly_chart(fig3, use_container_width="stretch")
+
+st.divider()
+st.subheader("🔮 Future Projection")
+
+left, right = st.columns([1, 2])
+
+with left:
+    st.caption("Adjust assumptions (simple monthly compounding model).")
+    monthly_contrib = st.slider("Monthly contribution ($)", 0, 2000, 300, 50)
+    years_forward = st.slider("Project forward (years)", 1, 30, 10, 1)
+
+    # Default to CAGR, but let you override
+    default_rate = float(cagr) if "cagr" in globals() else 0.07
+    exp_return = st.slider(
+        "Expected annual return (%)",
+        0.0, 20.0, round(default_rate * 100, 2), 0.25
+    ) / 100.0
+
+    st.caption("Tip: Keep this conservative (e.g., 5–8%).")
+
+with right:
+    # Simple projection using monthly compounding
+    start_val = float(current_value)
+    r_m = (1 + exp_return) ** (1/12) - 1  # monthly rate
+    months = years_forward * 12
+
+    proj_dates = pd.date_range(
+        start=latest["Date"] + pd.offsets.MonthBegin(1),
+        periods=months,
+        freq="MS"
+    )
+
+    values = []
+    v = start_val
+    for _ in range(months):
+        v = v * (1 + r_m) + monthly_contrib
+        values.append(v)
+
+    proj_df = pd.DataFrame({
+        "Date": proj_dates,
+        "Projected Value($)": values
+    })
+
+    # Merge historical + projected for a single chart
+    hist_df = df[["Date", "Current Value($)"]].rename(columns={"Current Value($)": "Value($)"})
+    fut_df = proj_df.rename(columns={"Projected Value($)": "Value($)"})
+    combined = pd.concat([hist_df, fut_df], ignore_index=True)
+
+    figp = go.Figure()
+    figp.add_trace(go.Scatter(
+        x=combined["Date"],
+        y=combined["Value($)"],
+        mode="lines",
+        name="Portfolio Value (Actual + Projected)",
+        line=dict(color="#2E7DFF")
+    ))
+
+    # Mark "today" / latest point
+    figp.add_trace(go.Scatter(
+        x=[latest["Date"]],
+        y=[current_value],
+        mode="markers",
+        name="Latest",
+        marker=dict(size=10, color="#111111")
+    ))
+
+    figp.update_layout(
+        title="Projected Portfolio Value",
+        xaxis_title="Date",
+        yaxis_title="Value ($)",
+        hovermode="x unified",
+        template="plotly_white",
+        legend=dict(orientation="h", y=1.12)
+    )
+
+    st.plotly_chart(figp, width="stretch")
+
+st.caption("Note: This projection is a simple model (constant contribution + constant return). It does not account for fees, inflation, or changing market regimes.")
+
+# Small table for key milestones
+milestones_years = [1, 3, 5, 10, 15, 20, 25, 30]
+milestones_years = [y for y in milestones_years if y <= years_forward]
+
+if milestones_years:
+    rows = []
+    for y in milestones_years:
+        idx = y * 12 - 1
+        rows.append({
+            "Year": y,
+            "Projected Value($)": proj_df["Projected Value($)"].iloc[idx]
+        })
+    mile_df = pd.DataFrame(rows)
+    mile_df["Projected Value($)"] = mile_df["Projected Value($)"].map(lambda x: f"${x:,.0f}")
+
+    st.markdown("### Milestones")
+    st.dataframe(mile_df, hide_index=True, width="stretch")
