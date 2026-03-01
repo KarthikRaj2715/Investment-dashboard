@@ -198,6 +198,9 @@ fig3.update_layout(
 
 st.plotly_chart(fig3, use_container_width="stretch")
 
+# -----------------------------
+# PROHECTION CHART
+# -----------------------------
 st.divider()
 st.subheader("🔮 Future Projection")
 
@@ -240,6 +243,8 @@ with right:
         "Projected Value($)": values
     })
 
+    proj_df["Projected Value($)"] = proj_df["Projected Value($)"].round(2)
+
     # Merge historical + projected for a single chart
     hist_df = df[["Date", "Current Value($)"]].rename(columns={"Current Value($)": "Value($)"})
     fut_df = proj_df.rename(columns={"Projected Value($)": "Value($)"})
@@ -252,6 +257,7 @@ with right:
         mode="lines",
         name="Portfolio Value (Actual + Projected)",
         line=dict(color="#2E7DFF")
+        hovertemplate="$%{y:,.2f}<extra></extra>"
     ))
 
     # Mark "today" / latest point
