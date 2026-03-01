@@ -57,6 +57,11 @@ def load_data():
 
 df = load_data()
 
+def compute_drawdown(series: pd.Series) -> pd.Series:
+    peak = series.cummax()
+    drawdown = (series / peak) - 1.0
+    return drawdown * 100  # percent
+
 # -----------------------------
 # SNAPSHOT (LATEST ROW)
 # -----------------------------
@@ -141,3 +146,30 @@ fig2.update_layout(
 )
 
 st.plotly_chart(fig2, use_container_width="stretch")
+
+# -----------------------------
+# DRAWDOWN CHART
+# -----------------------------
+df["Drawdown(%)"] = compute_drawdown(df["Current Value($)"])
+max_dd = df["Drawdown(%)"].min()
+max_dd_date = df.loc[df["Drawdown(%)"].idxmin(), "Date"]
+
+fig3 = go.Figure()
+
+fig3.add_trace(go.Scatter(
+    x=df["Date"],
+    y=df["Drawdown(%)"],
+    mode="lines",
+    name="Drawdown (%)",
+    line=dict(color="#D64545")  # red
+))
+
+fig3.update_layout(
+    title=f"Drawdown Over Time (Max Drawdown: {max_dd:.2f}% on {max_dd_date:%b %Y})",
+    xaxis_title="Date",
+    yaxis_title="Drawdown (%)",
+    hovermode="x unified",
+    template="plotly_white"
+)
+
+st.plotly_chart(fig3, use_container_width="stretch")
