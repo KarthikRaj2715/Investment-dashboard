@@ -256,7 +256,7 @@ with right:
         y=combined["Value($)"],
         mode="lines",
         name="Portfolio Value (Actual + Projected)",
-        line=dict(color="#2E7DFF")
+        line=dict(color="#2E7DFF"),
         hovertemplate="$%{y:,.2f}<extra></extra>"
     ))
 
