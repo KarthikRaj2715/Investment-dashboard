@@ -250,35 +250,93 @@ with right:
     fut_df = proj_df.rename(columns={"Projected Value($)": "Value($)"})
     combined = pd.concat([hist_df, fut_df], ignore_index=True)
 
-    figp = go.Figure()
-    figp.add_trace(go.Scatter(
-        x=combined["Date"],
-        y=combined["Value($)"],
-        mode="lines",
-        name="Portfolio Value (Actual + Projected)",
-        line=dict(color="#2E7DFF"),
-        hovertemplate="$%{y:,.2f}<extra></extra>"
-    ))
+def project_path(start_val, monthly_contrib, annual_return, months):
+    r_m = (1 + annual_return) ** (1/12) - 1
+    v = float(start_val)
+    out = []
+    for _ in range(months):
+        v = v * (1 + r_m) + monthly_contrib
+        out.append(v)
+    return out
 
-    # Mark "today" / latest point
-    figp.add_trace(go.Scatter(
-        x=[latest["Date"]],
-        y=[current_value],
-        mode="markers",
-        name="Latest",
-        marker=dict(size=10, color="#111111")
-    ))
+# Define scenarios around your selected expected return
+bear = max(0.0, exp_return - 0.03)   # -3%
+base = exp_return
+bull = min(0.20, exp_return + 0.03)  # +3% (cap at 20%)
 
-    figp.update_layout(
-        title="Projected Portfolio Value",
-        xaxis_title="Date",
-        yaxis_title="Value ($)",
-        hovermode="x unified",
-        template="plotly_white",
-        legend=dict(orientation="h", y=1.12)
-    )
+bear_vals = project_path(current_value, monthly_contrib, bear, months)
+base_vals = project_path(current_value, monthly_contrib, base, months)
+bull_vals = project_path(current_value, monthly_contrib, bull, months)
 
-    st.plotly_chart(figp, width="stretch")
+proj_df = pd.DataFrame({
+    "Date": proj_dates,
+    "Bear($)": pd.Series(bear_vals).round(2),
+    "Base($)": pd.Series(base_vals).round(2),
+    "Bull($)": pd.Series(bull_vals).round(2),
+})
+
+figp = go.Figure()
+
+# Band (Bear to Bull)
+figp.add_trace(go.Scatter(
+    x=proj_df["Date"],
+    y=proj_df["Bull($)"],
+    mode="lines",
+    name="Bull",
+    line=dict(color="#2E7DFF"),
+    hovertemplate="$%{y:,.2f}<extra>Bull</extra>"
+))
+figp.add_trace(go.Scatter(
+    x=proj_df["Date"],
+    y=proj_df["Bear($)"],
+    mode="lines",
+    name="Bear",
+    line=dict(color="#2E7DFF"),
+    fill="tonexty",
+    hovertemplate="$%{y:,.2f}<extra>Bear</extra>"
+))
+
+# Base line
+figp.add_trace(go.Scatter(
+    x=proj_df["Date"],
+    y=proj_df["Base($)"],
+    mode="lines",
+    name="Base",
+    line=dict(color="#111111"),
+    hovertemplate="$%{y:,.2f}<extra>Base</extra>"
+))
+
+# Historical line
+figp.add_trace(go.Scatter(
+    x=df["Date"],
+    y=df["Current Value($)"],
+    mode="lines",
+    name="Actual",
+    line=dict(color="#A0A0A0"),
+    hovertemplate="$%{y:,.2f}<extra>Actual</extra>"
+))
+
+# Latest marker
+figp.add_trace(go.Scatter(
+    x=[latest["Date"]],
+    y=[current_value],
+    mode="markers",
+    name="Latest",
+    marker=dict(size=10, color="#111111"),
+    hovertemplate="$%{y:,.2f}<extra>Latest</extra>"
+))
+
+figp.update_layout(
+    title="Projected Portfolio Value (Bear / Base / Bull)",
+    xaxis_title="Date",
+    yaxis_title="Value ($)",
+    hovermode="x unified",
+    template="plotly_white",
+    legend=dict(orientation="h", y=1.12),
+    yaxis_tickformat=",.2f"
+)
+
+st.plotly_chart(figp, width="stretch")
 
 st.caption("Note: This projection is a simple model (constant contribution + constant return). It does not account for fees, inflation, or changing market regimes.")
 
